@@ -8,15 +8,15 @@ error_reporting(E_ALL);
 // Utiliser localhost pour un environnement simple
 $db_config = [
     'master' => [
-        'host' => 'localhost', // Changé de db-master à localhost
-        'user' => 'coursero_user',
-        'pass' => 'votre_mot_de_passe', // Remplacer par votre mot de passe réel
+        'host' => 'db-master', // Changé de db-master à localhost
+        'user' => 'root',
+        'pass' => '', // Remplacer par votre mot de passe réel
         'name' => 'coursero',
     ],
     'slave' => [
-        'host' => 'localhost', // Changé de db-slave à localhost 
-        'user' => 'coursero_user',
-        'pass' => 'votre_mot_de_passe', // Remplacer par votre mot de passe réel
+        'host' => 'db-slave', // Changé de db-slave à localhost 
+        'user' => 'root',
+        'pass' => '', // Remplacer par votre mot de passe réel
         'name' => 'coursero',
     ],
 ];
