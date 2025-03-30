@@ -9,13 +9,13 @@ $db_config = [
     'master' => [
         'host' => 'localhost', // Changé de db-master à localhost
         'user' => 'coursero_user', // Changé de root à coursero_user
-        'pass' => 'votre_mot_de_passe', // Remplacer par le mot de passe de coursero_user
+        'pass' => 'root', // Remplacer par le mot de passe de coursero_user
         'name' => 'coursero',
     ],
     'slave' => [
         'host' => 'localhost', // Changé de db-slave à localhost
         'user' => 'coursero_user', // Changé de root à coursero_user
-        'pass' => 'votre_mot_de_passe', // Remplacer par le mot de passe de coursero_user
+        'pass' => 'root', // Remplacer par le mot de passe de coursero_user
         'name' => 'coursero',
     ],
 ];
@@ -96,8 +96,7 @@ function db_connect($read_only = false) {
                     [
                         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                        PDO::ATTR_EMULATE_PREPARES => false,
-                        PDO::ATTR_READONLY => true
+                        PDO::ATTR_EMULATE_PREPARES => false
                     ]
                 );
                 return $pdo;
