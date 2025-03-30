@@ -4,19 +4,18 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// Configuration de la base de données 
-// Utiliser localhost pour un environnement simple
+// Configuration de la base de données avec support de haute disponibilité
 $db_config = [
     'master' => [
-        'host' => 'db-master', // Changé de db-master à localhost
-        'user' => 'root',
-        'pass' => '', // Remplacer par votre mot de passe réel
+        'host' => 'localhost', // Changé de db-master à localhost
+        'user' => 'coursero_user', // Changé de root à coursero_user
+        'pass' => 'votre_mot_de_passe', // Remplacer par le mot de passe de coursero_user
         'name' => 'coursero',
     ],
     'slave' => [
-        'host' => 'db-slave', // Changé de db-slave à localhost 
-        'user' => 'root',
-        'pass' => '', // Remplacer par votre mot de passe réel
+        'host' => 'localhost', // Changé de db-slave à localhost
+        'user' => 'coursero_user', // Changé de root à coursero_user
+        'pass' => 'votre_mot_de_passe', // Remplacer par le mot de passe de coursero_user
         'name' => 'coursero',
     ],
 ];
@@ -29,7 +28,7 @@ define('DB_NAME', $db_config['master']['name']);
 
 // Configuration de l'application
 define('APP_NAME', 'Coursero - Évaluation de Code');
-define('APP_URL', 'http://coursero.local'); // Changé pour HTTP en développement
+define('APP_URL', 'https://coursero.local');
 define('UPLOAD_DIR', __DIR__ . '/../uploads/');
 define('MAX_UPLOAD_SIZE', 1024 * 1024); // 1MB
 
