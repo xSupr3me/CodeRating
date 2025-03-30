@@ -1,0 +1,48 @@
+FROM php:8.0-apache
+
+# Installation des extensions PHP nécessaires
+RUN apt-get update && apt-get install -y \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    libzip-dev \
+    libicu-dev \
+    unzip \
+    git \
+    gcc \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql zip intl opcache \
+    && pecl install apcu \
+    && docker-php-ext-enable apcu \
+    && a2enmod rewrite ssl headers
+
+# Configurer Apache pour utiliser SSL
+COPY config/ssl/coursero.crt /etc/ssl/certs/
+COPY config/ssl/coursero.key /etc/ssl/private/
+COPY config/apache/virtualhost.conf /etc/apache2/sites-available/coursero.conf
+
+# Activer le site et désactiver le site par défaut
+RUN a2ensite coursero.conf && a2dissite 000-default.conf
+
+# Configurer le répertoire pour stocker les sessions PHP
+RUN mkdir -p /var/lib/php/sessions && \
+    chmod 1733 /var/lib/php/sessions
+
+# Configuration de PHP
+COPY scripts/ha/php.ini /usr/local/etc/php/conf.d/custom.ini
+
+# Exposition des ports
+EXPOSE 80 443
+
+# Répertoire de travail
+WORKDIR /var/www/coursero
+
+# Ajouter un script d'entrée pour l'initialisation du serveur
+COPY scripts/ha/docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Point d'entrée Docker
+ENTRYPOINT ["docker-entrypoint.sh"]
+
+# Commande par défaut
+CMD ["apache2-foreground"]

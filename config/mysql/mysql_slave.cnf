@@ -1,0 +1,36 @@
+[mysqld]
+# Configuration de réplication pour le serveur esclave
+server-id = 2
+log_bin = mysql-bin
+binlog_format = ROW
+replicate_do_db = coursero
+relay-log = mysql-relay-bin
+read_only = 1
+
+# Sécurité
+symbolic-links = 0
+skip-name-resolve
+max_connections = 500
+max_connect_errors = 10000
+
+# InnoDB settings
+innodb_buffer_pool_size = 1G
+innodb_log_file_size = 256M
+innodb_flush_log_at_trx_commit = 1
+innodb_flush_method = O_DIRECT
+
+# Optimisations
+query_cache_size = 128M
+query_cache_limit = 2M
+thread_cache_size = 16
+table_open_cache = 4000
+key_buffer_size = 256M
+join_buffer_size = 1M
+sort_buffer_size = 2M
+read_buffer_size = 1M
+read_rnd_buffer_size = 4M
+myisam_sort_buffer_size = 64M
+thread_stack = 192K
+max_allowed_packet = 64M
+tmp_table_size = 64M
+max_heap_table_size = 64M
