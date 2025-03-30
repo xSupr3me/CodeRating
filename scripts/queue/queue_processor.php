@@ -5,18 +5,19 @@
  * Ce script surveille les soumissions en attente et les transmet au correcteur
  */
 
-require_once 'config.php';
 require_once dirname(__DIR__) . '/correction/corrector.php';
+require_once 'config.php';
 
 // Vérifier si le script est déjà en cours d'exécution
 $lock_file = TEMP_DIR . 'queue_processor.lock';
 if (file_exists($lock_file)) {
     $pid = file_get_contents($lock_file);
-    if (posix_kill($pid, 0)) {
-        log_message('INFO', "Le processeur de file d'attente est déjà en cours d'exécution (PID: $pid)");
+    // Sur Linux, nous pouvons vérifier si le processus existe encore
+    if (function_exists('posix_kill') && posix_kill($pid, 0)) {
+        echo "Le processeur de file d'attente est déjà en cours d'exécution (PID: $pid)\n";
         exit;
     }
-    log_message('WARNING', "Le fichier de verrouillage existe, mais le processus ($pid) ne semble pas être en cours d'exécution. Suppression du verrou.");
+    echo "Le fichier de verrouillage existe, mais le processus ne semble pas être en cours d'exécution. Suppression du verrou.\n";
     unlink($lock_file);
 }
 
@@ -24,24 +25,42 @@ if (file_exists($lock_file)) {
 file_put_contents($lock_file, getmypid());
 
 try {
-    log_message('INFO', "Démarrage du processeur de file d'attente");
+    echo "Démarrage du processeur de file d'attente (PID: " . getmypid() . ")\n";
+    echo "Appuyez sur Ctrl+C pour arrêter\n";
+    
+    // Intercepter le signal de terminaison pour nettoyer proprement
+    if (function_exists('pcntl_signal')) {
+        pcntl_signal(SIGTERM, function() use ($lock_file) {
+            echo "Arrêt du processeur de file d'attente suite à un signal SIGTERM\n";
+            if (file_exists($lock_file)) {
+                unlink($lock_file);
+            }
+            exit;
+        });
+    }
 
     // Processus principal de surveillance de la file d'attente
     while (true) {
-        // Récupérer les soumissions en attente
+        // Récupérer et traiter les soumissions en attente
         process_pending_submissions();
         
-        // Attendre avant la prochaine vérification
+        // Attendre avant la prochaine vérification (important de ne pas boucler à vide!)
+        echo "En attente de nouvelles soumissions...\n";
         sleep(POLLING_INTERVAL);
+        
+        // Traiter les signaux si disponible
+        if (function_exists('pcntl_signal_dispatch')) {
+            pcntl_signal_dispatch();
+        }
     }
 } catch (Exception $e) {
-    log_message('ERROR', "Erreur dans le processeur de file d'attente: " . $e->getMessage());
+    echo "Erreur dans le processeur de file d'attente: " . $e->getMessage() . "\n";
 } finally {
     // Supprimer le fichier de verrouillage
     if (file_exists($lock_file)) {
         unlink($lock_file);
     }
-    log_message('INFO', "Arrêt du processeur de file d'attente");
+    echo "Arrêt du processeur de file d'attente\n";
 }
 
 /**

@@ -10,9 +10,12 @@ WorkingDirectory=/var/www/coursero/scripts/queue
 ExecStart=/usr/bin/php /var/www/coursero/scripts/queue/queue_processor.php
 Restart=always
 RestartSec=10
-StandardOutput=syslog
-StandardError=syslog
+StandardOutput=journal
+StandardError=journal
 SyslogIdentifier=coursero-queue
+# S'assurer que le service ne se termine pas immédiatement
+TimeoutStartSec=0
+TimeoutStopSec=5
 
 [Install]
 WantedBy=multi-user.target
