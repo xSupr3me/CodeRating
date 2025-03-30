@@ -14,15 +14,15 @@ INSERT INTO exercises (course_id, exercise_number, title, description) VALUES
 -- Insertion de tests de référence
 INSERT INTO reference_tests (exercise_id, language_id, test_number, arguments, expected_output) VALUES
 -- Tests pour Hello World en C
-(1, 1, 1, '', 'Hello, World!\n'),
+(1, 1, 1, '', 'Hello, World!'),
 -- Tests pour Hello World en Python
-(1, 2, 1, '', 'Hello, World!\n'),
+(1, 2, 1, '', 'Hello, World!'),
 -- Tests pour Calcul de moyenne en C
-(2, 1, 1, '10 20', '15.0\n'),
-(2, 1, 2, '5 7', '6.0\n'),
+(2, 1, 1, '10 20', '15.0'),
+(2, 1, 2, '5 7', '6.0'),
 -- Tests pour Calcul de moyenne en Python
-(2, 2, 1, '10 20', '15.0\n'),
-(2, 2, 2, '5 7', '6.0\n');
+(2, 2, 1, '10 20', '15.0'),
+(2, 2, 2, '5 7', '6.0');
 
 -- Création d'un utilisateur de test (mot de passe: 'password')
 INSERT INTO users (email, password) VALUES 

@@ -25,23 +25,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($password !== $password_confirm) {
         $error = 'Les mots de passe ne correspondent pas.';
     } else {
-        // Vérifier si l'email existe déjà
-        $db = db_connect();
-        $stmt = $db->prepare('SELECT id FROM users WHERE email = ?');
-        $stmt->execute([$email]);
-        
-        if ($stmt->fetch()) {
-            $error = 'Cette adresse email est déjà utilisée.';
-        } else {
-            // Hachage du mot de passe et création de l'utilisateur
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+        try {
+            // Vérifier si l'email existe déjà
+            $db = db_connect();
+            $stmt = $db->prepare('SELECT id FROM users WHERE email = ?');
+            $stmt->execute([$email]);
             
-            $stmt = $db->prepare('INSERT INTO users (email, password) VALUES (?, ?)');
-            if ($stmt->execute([$email, $hashed_password])) {
-                $success = 'Compte créé avec succès! Vous pouvez maintenant vous connecter.';
+            if ($stmt->fetch()) {
+                $error = 'Cette adresse email est déjà utilisée.';
             } else {
-                $error = 'Une erreur est survenue lors de la création du compte.';
+                // Hachage du mot de passe et création de l'utilisateur
+                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                
+                $stmt = $db->prepare('INSERT INTO users (email, password) VALUES (?, ?)');
+                if ($stmt->execute([$email, $hashed_password])) {
+                    $success = 'Compte créé avec succès! Vous pouvez maintenant vous connecter.';
+                } else {
+                    $error = 'Une erreur est survenue lors de la création du compte.';
+                }
             }
+        } catch (Exception $e) {
+            // Journaliser l'erreur pour le débogage
+            error_log('Erreur dans register.php: ' . $e->getMessage());
+            $error = 'Une erreur système est survenue. Veuillez réessayer plus tard.';
         }
     }
 }
