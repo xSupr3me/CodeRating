@@ -81,9 +81,36 @@ chmod -R 777 /var/www/uploads /var/www/tmp /var/www/logs
 ## 6. Configuration d'Apache
 
 ```bash
-# Configurer le virtualhost Apache
+# Configurer le virtualhost Apache pour HTTP
 cat > /etc/apache2/sites-available/coursero.conf << 'EOF'
 <VirtualHost *:80>
+    ServerName coursero.local
+    ServerAlias www.coursero.local
+    
+    # Redirection vers HTTPS
+    Redirect permanent / https://coursero.local/
+</VirtualHost>
+EOF
+
+# Activer les modules nécessaires
+a2enmod rewrite ssl
+```
+
+## 7. Configuration de HTTPS avec un certificat auto-signé
+
+```bash
+# Créer le répertoire pour les certificats si nécessaire
+mkdir -p /etc/ssl/private
+
+# Générer un certificat auto-signé valide pour 365 jours
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    -keyout /etc/ssl/private/coursero.key \
+    -out /etc/ssl/certs/coursero.crt \
+    -subj "/C=FR/ST=Paris/L=Paris/O=Coursero/OU=IT/CN=coursero.local"
+
+# Créer la configuration du VirtualHost HTTPS
+cat > /etc/apache2/sites-available/coursero-ssl.conf << 'EOF'
+<VirtualHost *:443>
     ServerName coursero.local
     ServerAlias www.coursero.local
     DocumentRoot /var/www/coursero
@@ -94,19 +121,30 @@ cat > /etc/apache2/sites-available/coursero.conf << 'EOF'
         Require all granted
     </Directory>
     
+    # Configuration SSL
+    SSLEngine on
+    SSLCertificateFile /etc/ssl/certs/coursero.crt
+    SSLCertificateKeyFile /etc/ssl/private/coursero.key
+    
+    # Sécurité HTTPS renforcée
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    Header always set X-Content-Type-Options nosniff
+    
     ErrorLog ${APACHE_LOG_DIR}/coursero_error.log
     CustomLog ${APACHE_LOG_DIR}/coursero_access.log combined
 </VirtualHost>
 EOF
 
-# Activer le site et les modules nécessaires
-a2ensite coursero.conf
+# Activer les sites et modules
+a2ensite coursero.conf coursero-ssl.conf
 a2dissite 000-default.conf
-a2enmod rewrite
+a2enmod ssl headers
+
+# Redémarrer Apache pour appliquer les changements
 systemctl restart apache2
 ```
 
-## 7. Configuration de la base de données
+## 8. Configuration de la base de données
 
 ```bash
 # Importer le schéma de base de données
@@ -141,7 +179,7 @@ VALUES (1, 1, 1, '', 'Hello, World!'),
 EOF
 ```
 
-## 8. Installation des scripts de correction et de file d'attente
+## 9. Installation des scripts de correction et de file d'attente
 
 ```bash
 # Copier les scripts de correction
@@ -161,14 +199,14 @@ systemctl enable coursero-queue
 systemctl start coursero-queue
 ```
 
-## 9. Installation des paquets de développement pour la correction
+## 10. Installation des paquets de développement pour la correction
 
 ```bash
 # Installer gcc et autres outils
 apt install -y build-essential gcc g++ python3 python3-dev
 ```
 
-## 10. Finalisation et vérification
+## 11. Finalisation et vérification
 
 ```bash
 # Ajouter une entrée dans le fichier hosts pour le développement local
