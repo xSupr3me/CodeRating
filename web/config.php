@@ -1,48 +1,47 @@
 <?php
+// Configuration commune en un seul fichier
+
 // Activer les journaux d'erreurs détaillés pendant le développement
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// Configuration de la base de données avec support de haute disponibilité
-$db_config = [
-    'master' => [
-        'host' => 'localhost', // Changé de db-master à localhost
-        'user' => 'coursero_user', // Changé de root à coursero_user
-        'pass' => 'root', // Remplacer par le mot de passe de coursero_user
-        'name' => 'coursero',
-    ],
-    'slave' => [
-        'host' => 'localhost', // Changé de db-slave à localhost
-        'user' => 'coursero_user', // Changé de root à coursero_user
-        'pass' => 'root', // Remplacer par le mot de passe de coursero_user
-        'name' => 'coursero',
-    ],
-];
-
-// Utilisation par défaut du serveur maître pour les opérations d'écriture
-define('DB_HOST', $db_config['master']['host']);
-define('DB_USER', $db_config['master']['user']);
-define('DB_PASS', $db_config['master']['pass']);
-define('DB_NAME', $db_config['master']['name']);
+// Configuration de la base de données
+define('DB_HOST', 'localhost');
+define('DB_USER', 'coursero_user');
+define('DB_PASS', 'root');
+define('DB_NAME', 'coursero');
 
 // Configuration de l'application
 define('APP_NAME', 'Coursero - Évaluation de Code');
 define('APP_URL', 'https://coursero.local');
-define('UPLOAD_DIR', __DIR__ . '/../uploads/');
+define('UPLOAD_DIR', dirname(__DIR__) . '/uploads/');
+define('TEMP_DIR', dirname(__DIR__) . '/tmp/');
+define('LOG_DIR', dirname(__DIR__) . '/logs/');
 define('MAX_UPLOAD_SIZE', 1024 * 1024); // 1MB
+
+// Configuration de l'exécution des programmes
+define('MAX_EXECUTION_TIME', 5); // secondes
+define('MAX_MEMORY_USAGE', 128 * 1024 * 1024); // 128 MB
+define('TIMEOUT_COMMAND', 'timeout'); // 'timeout' sur Linux
+
+// Configuration des interpréteurs/compilateurs
+define('PYTHON_PATH', 'python3');
+define('GCC_PATH', 'gcc');
+define('C_COMPILER_OPTIONS', '-Wall -O2');
+
+// Configuration du processus de correction
+define('PARALLEL_JOBS', 2);
+define('POLLING_INTERVAL', 5);
 
 // Configuration de la session
 ini_set('session.cookie_httponly', 1);
-ini_set('session.cookie_secure', 0); // Désactivé pour HTTP
+ini_set('session.cookie_secure', 0);
 ini_set('session.use_only_cookies', 1);
-
-// Configuration de stockage de session
 ini_set('session.save_handler', 'files');
 ini_set('session.save_path', '/var/lib/php/sessions');
 
 // Configuration de journalisation
-define('LOG_DIR', __DIR__ . '/../logs/');
 if (!file_exists(LOG_DIR)) {
     mkdir(LOG_DIR, 0755, true);
 }
