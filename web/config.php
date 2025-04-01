@@ -12,6 +12,22 @@ define('DB_USER', 'coursero_user');
 define('DB_PASS', 'root');
 define('DB_NAME', 'coursero');
 
+// Définir $db_config utilisé dans la fonction db_connect
+$db_config = [
+    'master' => [
+        'host' => DB_HOST,
+        'user' => DB_USER,
+        'pass' => DB_PASS,
+        'name' => DB_NAME,
+    ],
+    'slave' => [
+        'host' => DB_HOST, // Même serveur que master car pas de réplication
+        'user' => DB_USER,
+        'pass' => DB_PASS,
+        'name' => DB_NAME,
+    ],
+];
+
 // Configuration de l'application
 define('APP_NAME', 'Coursero - Évaluation de Code');
 define('APP_URL', 'https://coursero.local');

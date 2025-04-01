@@ -81,14 +81,20 @@ chmod -R 777 /var/www/uploads /var/www/tmp /var/www/logs
 ## 6. Configuration d'Apache
 
 ```bash
-# Configurer le virtualhost Apache pour HTTP
+# Configurer le virtualhost Apache pour HTTP avec redirection vers HTTPS
 cat > /etc/apache2/sites-available/coursero.conf << 'EOF'
 <VirtualHost *:80>
     ServerName coursero.local
     ServerAlias www.coursero.local
     
-    # Redirection vers HTTPS
+    # Méthode 1: Redirection simple vers HTTPS
     Redirect permanent / https://coursero.local/
+    
+    # Méthode 2 (alternative): Redirection avec mod_rewrite
+    # Décommentez ces lignes si la méthode 1 ne fonctionne pas
+    # RewriteEngine On
+    # RewriteCond %{HTTPS} off
+    # RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 </VirtualHost>
 EOF
 
@@ -216,5 +222,5 @@ echo "127.0.0.1 coursero.local www.coursero.local" >> /etc/hosts
 systemctl restart apache2
 
 # Vérifier l'installation
-echo "L'installation est terminée. Vous pouvez accéder à Coursero à l'adresse: http://coursero.local"
+echo "L'installation est terminée. Vous pouvez accéder à Coursero à l'adresse: https://coursero.local"
 ```
