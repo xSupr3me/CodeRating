@@ -248,3 +248,32 @@ footer {
         margin: 0 0.75rem;
     }
 }
+
+/* Styles pour l'administration */
+.admin-link {
+    color: #ff9800 !important;
+}
+
+.admin-link:hover {
+    color: #ffb74d !important;
+}
+
+.admin-panel {
+    border: 1px solid #ddd;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+}
+
+.admin-actions {
+    margin-top: 1rem;
+}
+
+.btn-primary {
+    background-color: #4a90e2;
+}
+
+.btn-primary:hover {
+    background-color: #3a7bc8;
+}

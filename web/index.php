@@ -26,6 +26,9 @@ $stmt = $db->prepare('
 ');
 $stmt->execute([$user_id]);
 $submissions = $stmt->fetchAll();
+
+// Vérifier si l'utilisateur est administrateur (ID 1 par défaut)
+$is_admin = ($user_id == 1);
 ?>
 
 <!DOCTYPE html>
@@ -44,6 +47,9 @@ $submissions = $stmt->fetchAll();
                 <ul>
                     <li><a href="index.php" class="active">Tableau de bord</a></li>
                     <li><a href="submit.php">Soumettre un code</a></li>
+                    <?php if ($is_admin): ?>
+                    <li><a href="admin/process.php" class="admin-link">Admin</a></li>
+                    <?php endif; ?>
                     <li><a href="auth/logout.php">Déconnexion</a></li>
                 </ul>
             </nav>
@@ -103,6 +109,15 @@ $submissions = $stmt->fetchAll();
                 </table>
             <?php endif; ?>
         </section>
+
+        <?php if ($is_admin): ?>
+        <section class="admin-panel">
+            <h2>Administration</h2>
+            <div class="admin-actions">
+                <a href="admin/process.php" class="btn btn-primary">Traiter les soumissions en attente</a>
+            </div>
+        </section>
+        <?php endif; ?>
     </main>
 
     <footer>
