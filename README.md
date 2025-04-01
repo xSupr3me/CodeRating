@@ -7,7 +7,6 @@ Ce projet implémente une plateforme d'évaluation automatique de code pour les 
 - Sélection de cours, exercices et langages de programmation
 - Soumission de code pour évaluation
 - Évaluation automatique comparant avec des solutions de référence
-- Haute disponibilité avec équilibrage de charge
 
 ## Structure du projet
 - `/config` - Fichiers de configuration
