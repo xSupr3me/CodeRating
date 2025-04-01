@@ -1,6 +1,14 @@
 <?php
 // Script pour traiter les soumissions en attente avec évaluation réelle
-require_once '../../web/config.php';
+
+// Éviter le problème de redéfinition de constantes
+if (!defined('DB_HOST')) {
+    require_once '../../web/config.php';
+} else {
+    // Uniquement charger les fonctions si nécessaire
+    require_once dirname(dirname(__DIR__)) . '/web/config_functions.php';
+}
+
 require_once dirname(__DIR__) . '/correction/corrector.php';
 
 echo "== Traitement manuel des soumissions ==\n";
