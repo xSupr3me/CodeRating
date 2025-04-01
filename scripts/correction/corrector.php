@@ -2,15 +2,12 @@
 /**
  * Classe Corrector pour l'évaluation des codes soumis
  * 
- * Cette classe prend en charge l'exécution sécurisée du code et la comparaison
- * avec les résultats attendus.
+ * Cette classe compare la sortie du code de l'élève avec les résultats attendus.
  */
-
-require_once dirname(__DIR__) . '/queue/config.php';
 
 class Corrector {
     private $submission;
-    private $exercise_tests;
+    private $referenceTests = [];
     private $results = [];
     private $tmp_dir;
     private $compiled_file;
@@ -22,47 +19,69 @@ class Corrector {
      */
     public function __construct($submission) {
         $this->submission = $submission;
-        $this->tmp_dir = TEMP_DIR . 'submission_' . $submission['id'] . '_' . time() . '/';
         
         // Créer un répertoire temporaire unique pour cette correction
+        $this->tmp_dir = sys_get_temp_dir() . '/correction_' . uniqid() . '/';
         if (!file_exists($this->tmp_dir)) {
             mkdir($this->tmp_dir, 0755, true);
         }
         
-        // Récupérer les tests pour cet exercice
-        $this->loadExerciseTests();
+        // Charger les tests de référence pour l'exercice
+        $this->loadReferenceTests();
     }
     
     /**
-     * Exécuter la correction
+     * Charger les tests de référence depuis la base de données
+     */
+    private function loadReferenceTests() {
+        $db = db_connect(true); // Connexion en lecture seule
+        
+        $stmt = $db->prepare("
+            SELECT test_number, arguments, expected_output
+            FROM reference_tests
+            WHERE exercise_id = ? AND language_id = ?
+            ORDER BY test_number ASC
+        ");
+        
+        $stmt->execute([
+            $this->submission['exercise_id'],
+            $this->submission['language_id']
+        ]);
+        
+        $this->referenceTests = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        if (empty($this->referenceTests)) {
+            throw new Exception("Aucun test de référence trouvé pour cet exercice");
+        }
+    }
+    
+    /**
+     * Exécuter la correction complète
      * 
-     * @return array Résultat de la correction
+     * @return array Résultat de la correction avec score et détails
      */
     public function run() {
         try {
-            // Copier le fichier soumis dans le répertoire temporaire
-            $source_file = $this->copySubmissionFile();
+            // Copier le fichier soumis
+            $sourcePath = $this->copySubmissionFile();
             
-            // Préparer l'environnement d'exécution selon le langage
-            switch (strtolower($this->submission['language_name'])) {
+            // Préparer le fichier pour l'exécution selon le langage
+            switch(strtolower($this->submission['language_name'])) {
                 case 'c':
-                    $this->prepareC($source_file);
+                    $executablePath = $this->compileC($sourcePath);
                     break;
                 case 'python':
-                    // Pas besoin de compilation pour Python
+                    $executablePath = $sourcePath; // Python ne nécessite pas de compilation
                     break;
                 default:
                     throw new Exception("Langage non supporté: " . $this->submission['language_name']);
             }
             
-            // Exécuter les tests
-            $this->runTests();
+            // Exécuter tous les tests
+            $this->runAllTests($executablePath);
             
             // Calculer le score
             $score = $this->calculateScore();
-            
-            // Nettoyage
-            $this->cleanup();
             
             return [
                 'success' => true,
@@ -70,108 +89,88 @@ class Corrector {
                 'details' => $this->results
             ];
         } catch (Exception $e) {
-            log_message('ERROR', "Erreur lors de la correction de la soumission {$this->submission['id']}: " . $e->getMessage());
-            
-            // Nettoyage en cas d'erreur
-            $this->cleanup();
-            
             return [
                 'success' => false,
                 'score' => 0,
                 'error' => $e->getMessage()
             ];
+        } finally {
+            // Nettoyer les fichiers temporaires
+            $this->cleanup();
         }
     }
     
     /**
-     * Charger les tests pour l'exercice
-     */
-    private function loadExerciseTests() {
-        $db = db_connect();
-        $stmt = $db->prepare("
-            SELECT test_number, arguments, expected_output
-            FROM reference_tests
-            WHERE exercise_id = ? AND language_id = ?
-            ORDER BY test_number
-        ");
-        $stmt->execute([$this->submission['exercise_id'], $this->submission['language_id']]);
-        $this->exercise_tests = $stmt->fetchAll();
-        
-        if (empty($this->exercise_tests)) {
-            throw new Exception("Aucun test trouvé pour cet exercice et ce langage");
-        }
-    }
-    
-    /**
-     * Copier le fichier soumis dans le répertoire temporaire
+     * Copier le fichier de soumission vers un emplacement temporaire
      * 
-     * @return string Chemin complet vers le fichier source
+     * @return string Chemin vers le fichier copié
      */
     private function copySubmissionFile() {
-        $source_path = $this->submission['file_path'];
-        $dest_file = $this->tmp_dir . basename($source_path);
-        
-        if (!file_exists($source_path)) {
-            throw new Exception("Fichier source introuvable: $source_path");
+        $filePath = $this->submission['file_path'];
+        if (!file_exists($filePath)) {
+            throw new Exception("Fichier soumis introuvable: $filePath");
         }
         
-        if (!copy($source_path, $dest_file)) {
-            throw new Exception("Impossible de copier le fichier source");
+        $newPath = $this->tmp_dir . basename($filePath);
+        if (!copy($filePath, $newPath)) {
+            throw new Exception("Impossible de copier le fichier soumis");
         }
         
-        return $dest_file;
+        return $newPath;
     }
     
     /**
-     * Préparer l'environnement pour un programme C
+     * Compiler un programme C
      * 
-     * @param string $source_file Chemin vers le fichier source
+     * @param string $sourcePath Chemin vers le fichier source
+     * @return string Chemin vers l'exécutable généré
      */
-    private function prepareC($source_file) {
-        $this->compiled_file = $this->tmp_dir . 'program';
+    private function compileC($sourcePath) {
+        $outputPath = $this->tmp_dir . 'program';
         
-        // Compiler le programme C
-        $compile_cmd = sprintf(
-            '%s %s %s -o %s 2>&1',
-            GCC_PATH,
-            C_COMPILER_OPTIONS,
-            escapeshellarg($source_file),
-            escapeshellarg($this->compiled_file)
-        );
+        $command = 'gcc -Wall -o ' . escapeshellarg($outputPath) . ' ' . escapeshellarg($sourcePath) . ' 2>&1';
+        exec($command, $output, $returnVal);
         
-        exec($compile_cmd, $output, $return_var);
-        
-        if ($return_var !== 0) {
+        if ($returnVal !== 0) {
             throw new Exception("Erreur de compilation: " . implode("\n", $output));
         }
+        
+        return $outputPath;
     }
     
     /**
-     * Exécuter tous les tests pour cette soumission
+     * Exécuter tous les tests de référence
+     * 
+     * @param string $executablePath Chemin vers l'exécutable à tester
      */
-    private function runTests() {
-        foreach ($this->exercise_tests as $test) {
-            $this->results[$test['test_number']] = [
-                'arguments' => $test['arguments'],
-                'expected' => $test['expected_output'],
-                'passed' => false
-            ];
+    private function runAllTests($executablePath) {
+        foreach ($this->referenceTests as $test) {
+            $testNumber = $test['test_number'];
+            $arguments = $test['arguments'];
+            $expectedOutput = $test['expected_output'];
             
             try {
-                $output = $this->executeTest($test['arguments']);
+                $actualOutput = $this->executeTest($executablePath, $arguments);
                 
-                // Normaliser les espaces blancs et les fins de ligne
-                $normalized_output = $this->normalizeOutput($output);
-                $normalized_expected = $this->normalizeOutput($test['expected_output']);
+                // Normaliser les sorties pour la comparaison (espaces, sauts de ligne)
+                $normalizedExpected = $this->normalizeOutput($expectedOutput);
+                $normalizedActual = $this->normalizeOutput($actualOutput);
                 
-                // Comparer le résultat
-                $passed = ($normalized_output === $normalized_expected);
-                $this->results[$test['test_number']]['output'] = $output;
-                $this->results[$test['test_number']]['passed'] = $passed;
+                // Comparer les sorties
+                $passed = ($normalizedExpected === $normalizedActual);
+                
+                $this->results[$testNumber] = [
+                    'passed' => $passed,
+                    'expected' => $expectedOutput,
+                    'output' => $actualOutput
+                ];
                 
             } catch (Exception $e) {
-                $this->results[$test['test_number']]['error'] = $e->getMessage();
-                $this->results[$test['test_number']]['passed'] = false;
+                $this->results[$testNumber] = [
+                    'passed' => false,
+                    'expected' => $expectedOutput,
+                    'error' => $e->getMessage()
+                ];
             }
         }
     }
@@ -179,51 +178,33 @@ class Corrector {
     /**
      * Exécuter un test spécifique
      * 
-     * @param string $arguments Arguments à passer au programme
+     * @param string $executablePath Chemin vers l'exécutable
+     * @param string $arguments Arguments de ligne de commande
      * @return string Sortie du programme
      */
-    private function executeTest($arguments) {
-        // Commande d'exécution selon le langage
+    private function executeTest($executablePath, $arguments) {
+        $timeout = 5; // 5 secondes maximum d'exécution
+        
         switch (strtolower($this->submission['language_name'])) {
             case 'c':
-                $command = sprintf(
-                    '%s %s %s %s 2>&1',
-                    TIMEOUT_COMMAND,
-                    MAX_EXECUTION_TIME,
-                    escapeshellarg($this->compiled_file),
-                    escapeshellarg($arguments)
-                );
+                $command = "timeout $timeout " . escapeshellarg($executablePath) . " " . $arguments . " 2>&1";
                 break;
-                
             case 'python':
-                $source_file = $this->tmp_dir . basename($this->submission['file_path']);
-                $command = sprintf(
-                    '%s %s %s %s %s 2>&1',
-                    TIMEOUT_COMMAND,
-                    MAX_EXECUTION_TIME,
-                    PYTHON_PATH,
-                    escapeshellarg($source_file),
-                    escapeshellarg($arguments)
-                );
+                $command = "timeout $timeout python3 " . escapeshellarg($executablePath) . " " . $arguments . " 2>&1";
                 break;
-                
             default:
-                throw new Exception("Langage non supporté");
+                throw new Exception("Langage non supporté pour l'exécution");
         }
         
-        // Limiter la mémoire disponible pour le processus
-        $command = "ulimit -v " . (MAX_MEMORY_USAGE / 1024) . "; " . $command;
-        
-        // Exécuter la commande
         $output = [];
-        $return_var = 0;
-        exec($command, $output, $return_var);
+        $returnVal = 0;
         
-        // Vérifier les erreurs d'exécution
-        if ($return_var === 124) {
-            throw new Exception("Délai d'exécution dépassé (plus de " . MAX_EXECUTION_TIME . " secondes)");
-        } elseif ($return_var !== 0) {
-            throw new Exception("Erreur d'exécution (code $return_var): " . implode("\n", $output));
+        exec($command, $output, $returnVal);
+        
+        if ($returnVal === 124 || $returnVal === 137) {
+            throw new Exception("L'exécution a dépassé le délai maximum ($timeout secondes)");
+        } elseif ($returnVal !== 0) {
+            throw new Exception("Erreur lors de l'exécution (code $returnVal): " . implode("\n", $output));
         }
         
         return implode("\n", $output);
@@ -236,10 +217,10 @@ class Corrector {
      * @return string Sortie normalisée
      */
     private function normalizeOutput($output) {
-        // Remplacer les fins de ligne Windows par des fins de ligne Unix
+        // Remplacer les fins de ligne Windows par Unix
         $output = str_replace("\r\n", "\n", $output);
         
-        // Supprimer les espaces/tabulations en début et fin de ligne
+        // Supprimer les espaces et tabulations en début et fin de ligne
         $lines = explode("\n", $output);
         $lines = array_map('trim', $lines);
         
@@ -256,52 +237,54 @@ class Corrector {
     }
     
     /**
-     * Calculer le score final
+     * Calculer le score basé sur les résultats des tests
      * 
-     * @return float Pourcentage de réussite (0-100)
+     * @return float Score de 0 à 100
      */
     private function calculateScore() {
         if (empty($this->results)) {
             return 0;
         }
         
-        $passed_count = 0;
+        $totalTests = count($this->results);
+        $passedTests = 0;
+        
         foreach ($this->results as $result) {
             if ($result['passed']) {
-                $passed_count++;
+                $passedTests++;
             }
         }
         
-        return round(($passed_count / count($this->results)) * 100, 2);
+        return round(($passedTests / $totalTests) * 100, 2);
     }
     
     /**
      * Nettoyer les fichiers temporaires
      */
     private function cleanup() {
-        // Supprimer le répertoire temporaire et son contenu
-        $this->removeDirectory($this->tmp_dir);
-        
-        // Supprimer le fichier original soumis
-        if (file_exists($this->submission['file_path'])) {
-            unlink($this->submission['file_path']);
-        }
+        $this->deleteDirectory($this->tmp_dir);
     }
     
     /**
-     * Supprimer récursivement un répertoire et son contenu
+     * Supprimer un répertoire et son contenu récursivement
      * 
      * @param string $dir Chemin du répertoire à supprimer
      */
-    private function removeDirectory($dir) {
-        if (!file_exists($dir)) {
+    private function deleteDirectory($dir) {
+        if (!is_dir($dir)) {
             return;
         }
         
         $files = array_diff(scandir($dir), ['.', '..']);
+        
         foreach ($files as $file) {
             $path = $dir . '/' . $file;
-            is_dir($path) ? $this->removeDirectory($path) : unlink($path);
+            
+            if (is_dir($path)) {
+                $this->deleteDirectory($path);
+            } else {
+                unlink($path);
+            }
         }
         
         rmdir($dir);
