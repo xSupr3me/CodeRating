@@ -54,8 +54,8 @@ EOF
 mkdir -p /var/www
 cd /var/www
 
-# Cloner le dépôt
-git clone https://github.com/your-username/CodeRating.git
+# Cloner le dépôt - branche correction spécifique
+git clone --branch correction --single-branch https://github.com/xSupr3me/CodeRating.git
 ```
 
 ## 5. Déploiement de l'application

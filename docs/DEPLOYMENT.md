@@ -43,7 +43,7 @@ apt install -y haproxy
 
 ### Cloner le dépôt
 ```bash
-git clone https://github.com/username/coursero.git
+git clone --branch correction --single-branch https://github.com/xSupr3me/CodeRating.git
 cd coursero
 ```
 
