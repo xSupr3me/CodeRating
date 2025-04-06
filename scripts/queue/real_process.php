@@ -6,8 +6,8 @@
 // Charger la configuration
 require_once '/var/www/coursero/config.php';
 
-// Charger le correcteur
-require_once dirname(__DIR__) . '/correction/corrector.php';
+// Charger le correcteur - Correction de la syntaxe du chemin
+require_once '/var/www/scripts/correction/corrector.php';
 
 echo "=== Traitement des soumissions en attente ===\n";
 
