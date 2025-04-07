@@ -114,7 +114,17 @@ $is_admin = ($user_id == 1);
         <section class="admin-panel">
             <h2>Administration</h2>
             <div class="admin-actions">
-                <a href="admin/process.php" class="btn btn-primary">Traiter les soumissions en attente</a>
+                <?php
+                // Obtenir le nombre de soumissions en attente
+                $admin_db = db_connect();
+                $admin_stmt = $admin_db->query("SELECT COUNT(*) as count FROM submissions WHERE status = 'pending'");
+                $pending_count = $admin_stmt->fetch()['count'];
+                ?>
+                <p>Il y a actuellement <strong><?= $pending_count ?></strong> soumission(s) en attente de traitement.</p>
+                <a href="admin/process.php" class="btn btn-primary">Accéder au panneau d'administration</a>
+                <?php if ($pending_count > 0): ?>
+                    <p class="note">Note: Le traitement des soumissions nécessite une intervention manuelle dans le panneau d'administration.</p>
+                <?php endif; ?>
             </div>
         </section>
         <?php endif; ?>

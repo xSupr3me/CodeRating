@@ -62,6 +62,8 @@ class Corrector {
      */
     public function run() {
         try {
+            echo "Démarrage de la correction pour {$this->submission['file_path']}\n";
+            
             // Copier le fichier soumis
             $sourcePath = $this->copySubmissionFile();
             
@@ -150,6 +152,7 @@ class Corrector {
             $expectedOutput = $test['expected_output'];
             
             try {
+                echo "  Exécution du test #$testNumber... ";
                 $actualOutput = $this->executeTest($executablePath, $arguments);
                 
                 // Normaliser les sorties pour la comparaison (espaces, sauts de ligne)
@@ -165,7 +168,10 @@ class Corrector {
                     'output' => $actualOutput
                 ];
                 
+                echo $passed ? "RÉUSSI\n" : "ÉCHOUÉ\n";
+                
             } catch (Exception $e) {
+                echo "ERREUR\n";
                 $this->results[$testNumber] = [
                     'passed' => false,
                     'expected' => $expectedOutput,

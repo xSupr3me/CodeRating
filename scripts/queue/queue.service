@@ -1,15 +1,17 @@
 [Unit]
-Description=Coursero Queue Processor Service
-After=network.target mysql.service
+Description=Coursero Queue Processor Service - DISABLED
+After=network.target mysql.service apache2.service
 
 [Service]
 Type=simple
 User=www-data
 Group=www-data
-WorkingDirectory=/var/www/coursero/scripts/queue
-ExecStart=/usr/bin/php /var/www/coursero/scripts/queue/processor.php --daemon
+WorkingDirectory=/var/www/scripts/queue
+# La commande suivante est commentée pour désactiver le traitement automatique
+# ExecStart=/usr/bin/php /var/www/scripts/queue/real_process.php
+ExecStart=/bin/echo "Le traitement automatique est désactivé - utilisez le panneau d'administration"
 Restart=always
-RestartSec=10
+RestartSec=30
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=coursero-queue
