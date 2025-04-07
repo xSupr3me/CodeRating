@@ -3,13 +3,34 @@
  * Processeur de file d'attente qui utilise le correcteur réel pour évaluer les soumissions
  */
 
-// Charger la configuration
-require_once '/var/www/coursero/config.php';
+// Déterminer le chemin de base du projet
+$base_dir = dirname(dirname(__DIR__));
 
-// Important: Chemin explicite vers le correcteur réel
-require_once '/var/www/scripts/correction/corrector.php';
+// Charger la configuration en utilisant un chemin relatif
+if (file_exists($base_dir . '/web/config.php')) {
+    require_once $base_dir . '/web/config.php';
+} else {
+    // Fallback pour les installations différentes
+    require_once __DIR__ . '/../../web/config.php';
+}
+
+// Charger le correcteur réel avec un chemin relatif
+if (file_exists($base_dir . '/scripts/correction/corrector.php')) {
+    require_once $base_dir . '/scripts/correction/corrector.php';
+} else {
+    // Fallback pour les installations différentes
+    require_once __DIR__ . '/../correction/corrector.php';
+}
 
 // Configuration de journalisation
+if (!defined('LOG_DIR')) {
+    define('LOG_DIR', $base_dir . '/logs/');
+    // S'assurer que le répertoire existe
+    if (!file_exists(LOG_DIR)) {
+        mkdir(LOG_DIR, 0755, true);
+    }
+}
+
 $log_file = LOG_DIR . 'queue.log';
 function queue_log($level, $message) {
     global $log_file;

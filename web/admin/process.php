@@ -21,11 +21,33 @@ $output_log = [];
 // Traitement du formulaire
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['process_submissions'])) {
     try {
+        // Chemin du script de traitement
+        $script_path = dirname(dirname(__DIR__)) . '/scripts/queue/real_process.php';
+        
+        // Vérifier si le fichier existe
+        if (!file_exists($script_path)) {
+            // Essayer un autre chemin relatif si le premier n'existe pas
+            $script_path = __DIR__ . '/../../scripts/queue/real_process.php';
+            
+            // Si ce chemin n'existe pas non plus, utiliser un chemin absolu
+            if (!file_exists($script_path)) {
+                // Utiliser le chemin depuis la racine du projet (pour les systèmes Windows)
+                $root_dir = realpath(__DIR__ . '/../../');
+                $script_path = $root_dir . '/scripts/queue/real_process.php';
+            }
+        }
+        
+        // Afficher un message d'erreur si le fichier n'existe toujours pas
+        if (!file_exists($script_path)) {
+            throw new Exception("Le fichier de traitement des soumissions n'a pas été trouvé : " . $script_path);
+        }
+        
         // Exécuter le script de traitement
         $output = [];
         $return_var = 0;
         
-        exec('php ' . escapeshellarg(dirname(dirname(__DIR__)) . '/scripts/queue/real_process.php') . ' 2>&1', $output, $return_var);
+        $command = 'php ' . escapeshellarg($script_path) . ' 2>&1';
+        exec($command, $output, $return_var);
         $output_log = $output; // Sauvegarder la sortie complète
         
         if ($return_var === 0) {
