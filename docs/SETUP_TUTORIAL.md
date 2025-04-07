@@ -441,7 +441,7 @@ CHANGE MASTER TO
   MASTER_USER='repl_user',
   MASTER_PASSWORD='repl_password',
   MASTER_LOG_FILE='mysql-bin.000001',  # REMPLACEZ avec la valeur exacte du master
-  MASTER_LOG_POS=5009;                # REMPLACEZ avec la valeur exacte du master
+  MASTER_LOG_POS=6371;                # REMPLACEZ avec la valeur exacte du master
 
 START SLAVE;
 EOF
